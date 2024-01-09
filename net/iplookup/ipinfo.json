@@ -1,0 +1,34 @@
+[
+	{
+		"Name": "lo",
+		"Index": 1,
+		"Flag": "up|loopback",
+		"Mac": "",
+		"Mtu": 65536,
+		"IP": [
+			"127.0.0.1/8",
+			"::1/128"
+		]
+	},
+	{
+		"Name": "eth0",
+		"Index": 2,
+		"Flag": "up|broadcast|multicast",
+		"Mac": "00:0d:3a:3a:20:c9",
+		"Mtu": 1500,
+		"IP": [
+			"172.16.5.4/24",
+			"fe80::20d:3aff:fe3a:20c9/64"
+		]
+	},
+	{
+		"Name": "docker0",
+		"Index": 3,
+		"Flag": "up|broadcast|multicast",
+		"Mac": "02:42:03:37:7f:af",
+		"Mtu": 1500,
+		"IP": [
+			"172.17.0.1/16"
+		]
+	}
+]
