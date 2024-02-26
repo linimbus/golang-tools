@@ -1,48 +1,57 @@
 package main
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"flag"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
 	"os"
-	"crypto/hmac"
-	"crypto/sha256"
-	"encoding/hex"
 )
 
 var (
-	HELP bool
-	SRC_DIR  string
+	HELP      bool
+	SRC_DIR   string
 	Separator string
 	HMAC_LIST map[string]string
 )
 
-func init()  {
+func init() {
 	HMAC_LIST = make(map[string]string, 1024)
 	Separator = fmt.Sprintf("%c", os.PathSeparator)
-	flag.BoolVar(&HELP,"help",false,"This help.")
-	flag.StringVar(&SRC_DIR,"src", "","The directory path to be searched.")
+	flag.BoolVar(&HELP, "help", false, "This help.")
+	flag.StringVar(&SRC_DIR, "src", "", "The directory path to be searched.")
 }
 
-func hmacCalc(filename string) string {
-	body, err := ioutil.ReadFile(filename)
+func hmacCalc(filePath string) (string, error) {
+	file, err := os.Open(filePath)
 	if err != nil {
-		log.Printf("%s open failed! (%s)\n",filename, err.Error())
-		return ""
+		log.Printf("%s open failed! (%s)\n", filePath, err.Error())
+		return "", err
 	}
-	h := hmac.New(sha256.New, []byte("test"))
-	h.Write(body)
-	return hex.EncodeToString(h.Sum(nil))
+	defer file.Close()
+
+	hash := sha256.New()
+	if _, err := io.Copy(hash, file); err != nil {
+		log.Printf("%s read failed! (%s)\n", filePath, err.Error())
+		return "", err
+	}
+
+	hashInBytes := hash.Sum(nil)
+	hashString := hex.EncodeToString(hashInBytes)
+
+	return hashString, nil
 }
 
-func matchFile(filename string, hmacvalue string) bool {
-	file, b := HMAC_LIST[hmacvalue]
-	if b == true {
+func matchFile(filename string, hmac string) bool {
+	file, b := HMAC_LIST[hmac]
+	if b {
 		log.Printf("find match between %s <-> %s\n", file, filename)
 		return true
 	}
-	HMAC_LIST[hmacvalue] = filename
+	HMAC_LIST[hmac] = filename
 	return false
 }
 
@@ -53,11 +62,13 @@ func searchedFile(srcdir string) {
 			searchedFile(srcdir + Separator + file.Name())
 		} else {
 			filename := srcdir + Separator + file.Name()
-			hmac := hmacCalc(filename)
-			if hmac == "" {
+			hmac, err := hmacCalc(filename)
+			if err != nil {
 				continue
 			}
-			if matchFile(filename, hmac) == true {
+			// log.Printf("FILE: %s HMAC: %s\n", filename, hmac)
+
+			if matchFile(filename, hmac) {
 				err := os.Remove(filename)
 				if err != nil {
 					log.Printf("%s remove failed! (%s)\n", filename, err.Error())
@@ -70,7 +81,7 @@ func searchedFile(srcdir string) {
 func main() {
 
 	flag.Parse()
-	if HELP || SRC_DIR == ""{
+	if HELP || SRC_DIR == "" {
 		flag.Usage()
 		os.Exit(-1)
 	}
